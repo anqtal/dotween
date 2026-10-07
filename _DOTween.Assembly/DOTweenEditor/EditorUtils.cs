@@ -300,7 +300,14 @@ namespace DG.DOTweenEditor
         /// </summary>
         public static string GetAssemblyFilePath(Assembly assembly)
         {
-
+            // Loaded assembly paths may differ from asset paths in the CoreCLR editor.
+            // Resolve plugin assets through Unity so sibling resources remain discoverable.
+            string fileName = assembly.GetName().Name + ".dll";
+            foreach (PluginImporter importer in PluginImporter.GetAllImporters()) {
+                if (Path.GetFileName(importer.assetPath) == fileName) {
+                    return Path.GetFullPath(FileUtil.GetPhysicalPath(importer.assetPath));
+                }
+            }
             string codeBase = assembly.CodeBase;
             UriBuilder uri = new UriBuilder(codeBase);
             string path = Uri.UnescapeDataString(uri.Path);
@@ -463,7 +470,7 @@ namespace DG.DOTweenEditor
         static bool IsValidBuildTargetGroup(BuildTargetGroup group)
         {
             if (group == BuildTargetGroup.Unknown) return false;
-            Type moduleManager = Type.GetType("UnityEditor.Modules.ModuleManager, UnityEditor.dll");
+            Type moduleManager = typeof(PlayerSettings).Assembly.GetType("UnityEditor.Modules.ModuleManager");
 //            MethodInfo miIsPlatformSupportLoaded = moduleManager.GetMethod("IsPlatformSupportLoaded", BindingFlags.Static | BindingFlags.NonPublic);
             MethodInfo miGetTargetStringFromBuildTargetGroup = moduleManager.GetMethod(
                 "GetTargetStringFromBuildTargetGroup", BindingFlags.Static | BindingFlags.NonPublic
